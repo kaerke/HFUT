@@ -1,5 +1,4 @@
 /* 
- * 文件名: systick.c
  * 描述: SysTick系统定时器实现
  * 功能: 提供精确的系统时间和延时功能
  */
@@ -57,11 +56,11 @@ void Delay_us(uint32_t us)
 {
     uint32_t i;
     
-    /* 简单的循环延时，需要根据系统时钟调整 */
+    /* 简单的循环延时 */
     /* 72MHz系统时钟，约需要72次循环 = 1us */
     for (i = 0; i < us * 72; i++)
     {
-        __NOP();  // 空操作，防止编译器优化掉循环
+        __NOP();  
     }
 }
 
@@ -112,5 +111,4 @@ void SysTick_Handler(void)
 void SysTickIncrement(void)
 {
     /* 这个函数保持为空，SysTick_Handler直接处理 */
-    /* 保留这个接口是为了兼容性 */
 }

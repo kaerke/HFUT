@@ -1,12 +1,11 @@
 /* 
- * 文件名: pwm.c (优化版本)
  * 描述: PWM模块，用于2Hz频率的精确呼吸灯效果
  * 功能: 配置定时器产生PWM信号，实现2Hz LED呼吸效果
  */
 
 #include "stm32f10x.h"
 #include "pwm.h"
-#include "systick.h"  // 使用精确时间系统
+#include "systick.h"  
 
 /* 定义呼吸灯参数 */
 #define PWM_PERIOD      1000    // PWM周期值

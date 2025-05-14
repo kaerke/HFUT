@@ -1,5 +1,4 @@
-/* 
- * 文件名: main.c (优化版本)
+/*
  * 描述: STM32F103温度监测系统主程序 - 使用精确的SysTick时间系统
  * 功能: 采集LM35温度数据、通过串口通信、LED状态指示和按键控制温度阈值
  */
@@ -9,7 +8,7 @@
 #include "pwm.h"
 #include "usart.h"
 #include "interrupt.h"
-#include "systick.h"  // 包含精确时间系统头文件
+#include "systick.h"  
 #include <stdio.h>
 #include <string.h>
 
@@ -22,7 +21,7 @@ uint8_t system_init_complete = 0;    // 系统初始化完成标志
 uint8_t serial_rx_flag = 0;          // 串口接收标志
 uint8_t serial_rx_data = 0;          // 串口接收的数据
 
-/* 函数声明 */
+
 void SystemInit(void);               // 系统初始化
 void LED_Control(void);              // LED控制函数
 void Process_Serial_Command(void);   // 处理串口命令
@@ -181,4 +180,3 @@ void EXTI9_5_IRQHandler(void)
         EXTI_ClearITPendingBit(EXTI_Line8);
     }
 }
-
