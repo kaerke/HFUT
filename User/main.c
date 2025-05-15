@@ -164,18 +164,41 @@ void USART1_IRQHandler(void)
 
 void Process_Key(void)
 {
-    if(key_pressed_flag)
+    static uint8_t key_processed = 0;  // 标记当前按键是否已处理
+    
+    if(key_pressed_flag && !key_processed)
     {
-        /* 循环切换温度阈值 */
-        temp_threshold_index = (temp_threshold_index + 1) % 3;
-        current_threshold = temp_thresholds[temp_threshold_index];
+        /* 延迟一会再检查按键状态，确保按键稳定 */
+        Delay_ms(10);
         
-        /* 通过串口发送新的阈值 */
-        char threshold_buffer[30];
-        sprintf(threshold_buffer, "New Threshold: %.1f°C\r\n", current_threshold);
-        USART_SendString(USART1, threshold_buffer);
-        
-        /* 清除按键标志 */
+        /* 再次检查按键是否仍然按下 */
+        if(GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_8) == 0)
+        {
+            /* 循环切换温度阈值 */
+            temp_threshold_index = (temp_threshold_index + 1) % 3;
+            current_threshold = temp_thresholds[temp_threshold_index];
+            
+            /* 通过串口发送新的阈值 */
+            char threshold_buffer[30];
+            sprintf(threshold_buffer, "New Threshold: %.1f°C\r\n", current_threshold);
+            USART_SendString(USART1, threshold_buffer);
+            
+            /* 标记此次按键已处理 */
+            key_processed = 1;
+        }
+    }
+    else if(key_pressed_flag == 0 && key_processed == 1)
+    {
+        /* 等待按键释放后才清除处理标志，防止连续触发 */
+        if(GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_8) == 1)
+        {
+            key_processed = 0;
+        }
+    }
+    
+    /* 在按键松开状态下清除标志 */
+    if(GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_8) == 1)
+    {
         key_pressed_flag = 0;
     }
 }
@@ -186,21 +209,16 @@ void EXTI9_5_IRQHandler(void)
 {
     if(EXTI_GetITStatus(EXTI_Line8) != RESET) // PA8按键中断
     {
-        /* 不要在这里使用Delay_ms()，而是设置一个标志位 */
-        /* 记录按键触发时间，用于主循环中的去抖处理 */
-        static uint32_t last_key_time = 0;
+        static uint32_t last_trigger_time = 0;
         uint32_t current_time = GetSysTime_ms();
         
-        /* 简单的时间间隔检测，防止频繁触发 */
-        if(current_time - last_key_time > 50) // 50ms去抖时间
+        /* 更严格的时间检测，防止频繁触发 */
+        if(current_time - last_trigger_time > 200) // 增加到200ms的防抖时间
         {
-            if(GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_8) == 0)
-            {
-                /* 设置按键检测标志，在主循环中处理按键逻辑 */
-                extern uint8_t key_pressed_flag;
-                key_pressed_flag = 1;
-                last_key_time = current_time;
-            }
+            /* 只设置标志，不读取按键状态（因为已经确认是下降沿触发了） */
+            extern uint8_t key_pressed_flag;
+            key_pressed_flag = 1;
+            last_trigger_time = current_time;
         }
         
         /* 清除中断标志位 */
