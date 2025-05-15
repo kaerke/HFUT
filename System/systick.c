@@ -15,6 +15,7 @@ static volatile uint32_t DelayTick_ms = 0;   // 延时计数器
  * @param  无
  * @retval 无
  */
+/* systick.c中修改SysTick初始化函数 */
 void SysTick_Init(void)
 {
     /* SysTick配置为1ms中断一次 */
@@ -25,8 +26,8 @@ void SysTick_Init(void)
         while (1);
     }
     
-    /* 设置SysTick中断优先级 */
-    NVIC_SetPriority(SysTick_IRQn, 0x0);  // 最高优先级
+    /* 设置SysTick中断优先级 (改为较低优先级) */
+    NVIC_SetPriority(SysTick_IRQn, 0x0F);  // 降低SysTick优先级
     
     /* 清零计数器 */
     SystemTick_ms = 0;

@@ -20,6 +20,7 @@ float current_threshold = 30.0f;     // 当前温度阈值，默认30度
 uint8_t system_init_complete = 0;    // 系统初始化完成标志
 uint8_t serial_rx_flag = 0;          // 串口接收标志
 uint8_t serial_rx_data = 0;          // 串口接收的数据
+uint8_t key_pressed_flag = 0;        // 按键按下标志
 
 
 void SystemInit(void);               // 系统初始化
@@ -27,6 +28,7 @@ void LED_Control(void);              // LED控制函数
 void Process_Serial_Command(void);   // 处理串口命令
 void Send_Temperature(void);         // 发送温度数据
 void Check_Temperature(void);        // 检测温度并更新LED状态
+void Process_Key(void); 
 
 /* 主函数 */
 int main(void)
@@ -61,27 +63,31 @@ int main(void)
     system_init_complete = 1;
     
     /* 主循环 */
+    /* 主循环修改 */
     while (1)
     {
         /* 采集温度数据 */
         current_temp = ADC_GetTemperature();
-        
+    
         /* 检测温度并更新LED状态 */
         Check_Temperature();
-        
+    
         /* 更新呼吸灯效果 */
         PWM_UpdateBreathingEffect();
-        
+    
+        /* 处理按键事件 */
+        Process_Key();
+    
         /* 定时发送温度数据 */
-        Send_Temperature();
-        
+     Send_Temperature();
+    
         /* 处理串口接收到的命令 */
         if (serial_rx_flag)
         {
             Process_Serial_Command();
             serial_rx_flag = 0;
         }
-        
+    
         /* 精确延时20ms，控制主循环频率50Hz */
         Delay_ms(20);
     }
@@ -155,25 +161,46 @@ void USART1_IRQHandler(void)
     }
 }
 
+
+void Process_Key(void)
+{
+    if(key_pressed_flag)
+    {
+        /* 循环切换温度阈值 */
+        temp_threshold_index = (temp_threshold_index + 1) % 3;
+        current_threshold = temp_thresholds[temp_threshold_index];
+        
+        /* 通过串口发送新的阈值 */
+        char threshold_buffer[30];
+        sprintf(threshold_buffer, "New Threshold: %.1f°C\r\n", current_threshold);
+        USART_SendString(USART1, threshold_buffer);
+        
+        /* 清除按键标志 */
+        key_pressed_flag = 0;
+    }
+}
+
+
 /* 外部中断处理函数 - 按键中断 */
 void EXTI9_5_IRQHandler(void)
 {
     if(EXTI_GetITStatus(EXTI_Line8) != RESET) // PA8按键中断
     {
-        /* 消除按键抖动 - 精确延时 */
-        Delay_ms(20);
+        /* 不要在这里使用Delay_ms()，而是设置一个标志位 */
+        /* 记录按键触发时间，用于主循环中的去抖处理 */
+        static uint32_t last_key_time = 0;
+        uint32_t current_time = GetSysTime_ms();
         
-        /* 确认按键按下 */
-        if(GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_8) == 0)
+        /* 简单的时间间隔检测，防止频繁触发 */
+        if(current_time - last_key_time > 50) // 50ms去抖时间
         {
-            /* 循环切换温度阈值 */
-            temp_threshold_index = (temp_threshold_index + 1) % 3;
-            current_threshold = temp_thresholds[temp_threshold_index];
-            
-            /* 通过串口发送新的阈值 */
-            char threshold_buffer[30];
-            sprintf(threshold_buffer, "New Threshold: %.1f°C\r\n", current_threshold);
-            USART_SendString(USART1, threshold_buffer);
+            if(GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_8) == 0)
+            {
+                /* 设置按键检测标志，在主循环中处理按键逻辑 */
+                extern uint8_t key_pressed_flag;
+                key_pressed_flag = 1;
+                last_key_time = current_time;
+            }
         }
         
         /* 清除中断标志位 */

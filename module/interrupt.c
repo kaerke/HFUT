@@ -39,6 +39,7 @@ void GPIO_Config(void)
  * @param  无
  * @retval 无
  */
+/* interrupt.c中修改外部中断配置 */
 void EXTI_Config(void)
 {
     EXTI_InitTypeDef EXTI_InitStructure;
@@ -57,10 +58,10 @@ void EXTI_Config(void)
     EXTI_InitStructure.EXTI_LineCmd = ENABLE;
     EXTI_Init(&EXTI_InitStructure);
     
-    /* 配置中断优先级 */
+    /* 配置中断优先级 - 确保高于SysTick */
     NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn; // EXTI8在EXTI9_5_IRQn中
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x0F;
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0F;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x0E; // 优先级高于SysTick
+    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0E;
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStructure);
 }
